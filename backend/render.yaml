@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: fitai-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+    envVars:
+      - key: IBM_API_KEY
+        sync: false
+      - key: IBM_PROJECT_ID
+        sync: false
+      - key: IBM_URL
+        # Frankfurt region — change to https://us-south.ml.cloud.ibm.com for Dallas
+        value: https://eu-de.ml.cloud.ibm.com
+      - key: WATSONX_MODEL_ID
+        # IBM Granite model available in eu-de (verified 2025).
+        # If deploying to us-south use: ibm/granite-3-2-8b-instruct
+        value: ibm/granite-4-h-small
+      - key: WATSONX_DEBUG
+        value: "false"
+      - key: FLASK_DEBUG
+        value: "false"
+      - key: FLASK_SECRET_KEY
+        generateValue: true
