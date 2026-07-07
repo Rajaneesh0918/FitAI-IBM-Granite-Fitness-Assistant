@@ -1,6 +1,42 @@
 # 💪 FitAI — AI-Powered Fitness Buddy
 
+<img width="1548" height="907" alt="image" src="https://github.com/user-attachments/assets/14c803a9-4170-48e5-828f-0898114b4716" />
+
+
+
+
+
+<img width="1473" height="903" alt="image" src="https://github.com/user-attachments/assets/e5fe4872-2dc0-4a76-a0db-2bcc7d585027" />
+
+
+
+
+
+<img width="1143" height="778" alt="image" src="https://github.com/user-attachments/assets/ffea90fe-ee75-4d44-a199-aadd42bf785d" />
+
+
+
+
+
+
+<img width="1390" height="907" alt="image" src="https://github.com/user-attachments/assets/be53e5e4-fb10-4b00-a23b-0e49e2492443" />
+
+
+
+
+
+
 **FitAI** is a professional full-stack fitness web application powered by **IBM Watsonx.ai** and **IBM Granite Foundation Models**. It provides personalized workout plans, nutrition guidance, BMI/calorie calculations, an exercise library, and daily AI motivation — all through a modern React + Flask architecture.
+
+## Why FitAI?
+
+FitAI is an AI-powered fitness assistant designed to help users
+achieve healthier lifestyles through personalized workout plans,
+nutrition guidance, BMI analysis, calorie tracking, and motivational coaching.
+
+Powered by IBM Granite foundation models on IBM watsonx.ai,
+FitAI delivers intelligent, context-aware recommendations tailored
+to each user's fitness goals.
 
 ---
 
@@ -60,6 +96,10 @@ FitAI/
     ├── vercel.json                        # Vercel deployment config
     └── .env.example
 ```
+## System Architecure
+
+<img width="1536" height="1024" alt="image" src="https://github.com/user-attachments/assets/c6dd821c-0070-485d-8c10-e26471537b03" />
+
 
 ---
 
@@ -284,10 +324,22 @@ WATSONX_MODEL_ID=ibm/granite-4-h-small
 
 ---
 
+## Future Scope
+
+- Wearable integration
+- Voice coaching
+- AI progress prediction
+- Multi-language support
+- Mobile application
+
+---
+
 ## 📄 License
 
 MIT License — Free to use and modify for personal and commercial projects.
 
 ---
 
-*Built with [IBM Bob](https://www.ibm.com/products/watsonx-ai) · Powered by IBM Watsonx.ai & IBM Granite Foundation Models*
+*Developed as part of the IBM SkillsBuild AICTE Internship 2026.
+Powered by IBM Granite foundation models through IBM watsonx.ai.
+[IBM Bob](https://www.ibm.com/products/watsonx-ai) · Powered by IBM Watsonx.ai & IBM Granite Foundation Models*
