@@ -3,10 +3,10 @@ import { Zap } from 'lucide-react'
 
 export default function PageLoader() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white dark:bg-gray-950">
+    <div className="min-h-screen flex items-center justify-center bg-surface-50 dark:bg-gray-950">
       <div className="flex flex-col items-center gap-4">
-        <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center animate-pulse-slow">
-          <Zap className="w-8 h-8 text-white fill-current" />
+        <div className="w-14 h-14 bg-brand-500 rounded-2xl flex items-center justify-center animate-pulse-slow shadow-card-md">
+          <Zap className="w-7 h-7 text-white fill-current" />
         </div>
         <div className="flex gap-1.5">
           {[0, 1, 2].map((i) => (

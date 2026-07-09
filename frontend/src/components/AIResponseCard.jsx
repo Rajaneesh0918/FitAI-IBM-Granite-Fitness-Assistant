@@ -13,8 +13,8 @@ function formatAIText(text) {
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<strong>$1</strong>')
     // Headings: lines starting with ##
-    .replace(/^## (.+)$/gm, '<h3 class="font-bold text-brand-600 dark:text-brand-400 text-base mt-3 mb-1">$1</h3>')
-    .replace(/^# (.+)$/gm,  '<h2 class="font-bold text-brand-600 dark:text-brand-400 text-lg mt-4 mb-2">$1</h2>')
+    .replace(/^## (.+)$/gm, '<h3 class="font-bold text-brand-500 dark:text-brand-400 text-base mt-3 mb-1">$1</h3>')
+    .replace(/^# (.+)$/gm,  '<h2 class="font-bold text-brand-500 dark:text-brand-400 text-lg mt-4 mb-2">$1</h2>')
     // Bullet lists: lines starting with - or •
     .replace(/^[-•] (.+)$/gm, '<li class="ml-4 list-disc text-sm leading-relaxed">$1</li>')
     // Number lists: lines starting with digit.
@@ -30,7 +30,7 @@ export default function AIResponseCard({ content, timestamp, model, showMeta = t
   return (
     <div className="flex gap-3 animate-slide-up">
       {/* Avatar */}
-      <div className="flex-shrink-0 w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center">
+      <div className="flex-shrink-0 w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shadow-card">
         <Bot className="w-5 h-5 text-white" />
       </div>
 
@@ -45,7 +45,7 @@ export default function AIResponseCard({ content, timestamp, model, showMeta = t
         </div>
 
         {/* Message bubble */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3">
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-card">
           <div
             className="prose-fit text-gray-800 dark:text-gray-200 text-sm leading-relaxed"
             dangerouslySetInnerHTML={{ __html: formatAIText(content) }}
@@ -67,10 +67,10 @@ export default function AIResponseCard({ content, timestamp, model, showMeta = t
 export function TypingIndicator() {
   return (
     <div className="flex gap-3 animate-fade-in">
-      <div className="flex-shrink-0 w-9 h-9 bg-gradient-to-br from-brand-500 to-brand-600 rounded-xl flex items-center justify-center">
+      <div className="flex-shrink-0 w-9 h-9 bg-brand-500 rounded-xl flex items-center justify-center shadow-card">
         <Bot className="w-5 h-5 text-white" />
       </div>
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl rounded-tl-sm px-4 py-3 shadow-card">
         <div className="flex items-center gap-1.5">
           {[0, 1, 2].map((i) => (
             <div
