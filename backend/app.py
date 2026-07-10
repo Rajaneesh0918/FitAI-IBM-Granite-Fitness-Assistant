@@ -632,19 +632,41 @@ def nutrition_guidance():
     """Generate personalized nutrition and meal guidance using IBM Granite."""
     data = request.get_json(force=True)
 
-    goal         = data.get("goal", "balanced healthy eating")
-    calories     = data.get("calories", 2000)
-    diet_type    = data.get("diet_type", "balanced")   # vegetarian, vegan, keto, etc.
-    duration     = data.get("duration", "7-day")
-    user_profile = data.get("user_profile", {})
+    goal          = data.get("goal", "balanced healthy eating")
+    calories      = data.get("calories", 2000)
+    diet_type     = data.get("diet_type", "balanced")   # vegetarian, vegan, keto, etc.
+    food_type     = data.get("food_type", "Vegetarian")
+    duration      = data.get("duration", "7-day")
+    meals_per_day = data.get("meals_per_day", 3)
+    allergies     = data.get("allergies", "none")
+    budget_amount = data.get("budget_amount", 0)
+    budget_period = data.get("budget_period", "daily")
+    user_profile  = data.get("user_profile", {})
+
+    age      = data.get("age") or user_profile.get("age", "unknown")
+    gender   = data.get("gender") or user_profile.get("gender", "unspecified")
+    height   = data.get("height") or user_profile.get("height", "unknown")
+    weight   = data.get("weight") or user_profile.get("weight", "unknown")
+    activity = data.get("activity") or user_profile.get("activity", "Moderate")
+    region   = data.get("region") or data.get("country") or user_profile.get("region") or user_profile.get("country")
+    region_text = f" Region or country: {region}." if region else ""
 
     prompt_text = (
-        f"Create a detailed {duration} {diet_type} meal plan. "
-        f"Goal: {goal}. Target calories: {calories} kcal/day. "
+        f"FitAI must generate a personalized nutrition plan that always satisfies both the user's fitness goal and the user's available food budget. "
+        f"Use all provided user details: age {age}, gender {gender}, height {height} cm, weight {weight} kg, activity level {activity}, fitness goal '{goal}', diet preference '{diet_type}', food preference '{food_type}', meals per day {meals_per_day}, allergies '{allergies or 'none'}', budget amount ₹{budget_amount}, budget period {budget_period}.{region_text} "
+        f"First determine the approximate daily food budget by converting weekly budgets to a daily value (divide by 7) or monthly budgets to a daily value (divide by 30). "
+        f"Plan every meal so that the estimated total daily food cost stays within the available budget and maintain nutrition quality as high as possible within that budget. "
+        f"Choose foods according to affordability: for lower budgets prefer nutritious local staples and affordable sources of protein, for medium budgets offer a balanced variety, and for higher budgets include premium yet practical options. "
+        f"Do not recommend difficult-to-obtain or unusually expensive foods for the user's region unless the budget comfortably supports them. "
+        f"If the budget is too low to realistically meet the fitness goal, explain this politely, identify the nutritional limitations, recommend the smallest practical budget increase, suggest affordable alternative foods, and still generate the best possible plan within the current budget. "
+        f"If the budget is very high, avoid unnecessary expense and choose foods that provide real nutritional benefit, variety, sustainability, and practicality. "
+        f"Always honor both the fitness goal and the budget constraint. Never ignore either one. "
+        f"Estimate approximate costs and include: Estimated Daily Cost, Estimated Weekly Cost, and Estimated Budget Utilization, making it clear whether the plan stays within the user's budget. "
+        f"Include these output sections: Nutrition Summary, Daily Meal Plan, Estimated Food Cost, Weekly Grocery List, Budget Optimization Suggestions, Affordable Alternatives (if applicable), Hydration Recommendation, Nutrition Tips, and Medical Disclaimer. "
         f"Include breakfast, mid-morning snack, lunch, evening snack, and dinner. "
         f"Show calorie count and macros (protein/carbs/fats) for each meal. "
-        f"Include meal prep tips, timing recommendations, and hydration guidance. "
-        f"End with a grocery shopping list for the week."
+        f"Include meal prep tips, timing recommendations, hydration guidance, and a grocery shopping list for the week. "
+        f"FitAI is designed to generate plans that are medically sensible and financially practical, with the budget informing ingredient selection, meal planning, grocery recommendations, and overall nutrition strategy throughout the entire response."
     )
 
     try:

@@ -221,7 +221,7 @@ export default function Landing() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950 overflow-x-hidden">
+    <div className="premium-page min-h-screen bg-white dark:bg-slate-950 overflow-x-hidden">
 
       {/* ══════════════════════════════════════════════════════════
           NAVBAR — sticky, glass on scroll

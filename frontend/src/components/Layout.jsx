@@ -108,7 +108,7 @@ export default function Layout() {
       </header>
 
       {/* ── Page content ── */}
-      <main className="flex-1 bg-surface-50 dark:bg-gray-950">
+      <main className="flex-1 bg-surface-50 dark:bg-slate-950">
         <Outlet />
       </main>
 

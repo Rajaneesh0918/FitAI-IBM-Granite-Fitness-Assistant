@@ -60,10 +60,10 @@ export default function CalorieCalc() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-4 sm:px-6 py-8">
+    <div className="premium-page max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-purple-500 rounded-xl flex items-center justify-center">
+          <div className="w-11 h-11 bg-brand-500 rounded-2xl flex items-center justify-center shadow-card-md">
             <Calculator className="w-6 h-6 text-white" />
           </div>
           <h1 className="section-title">Calorie Calculator</h1>
@@ -73,7 +73,7 @@ export default function CalorieCalc() {
         </p>
       </div>
 
-      <div className="card p-6 mb-6">
+      <div className="card p-5 sm:p-6 mb-6">
         <h2 className="font-bold text-gray-900 dark:text-white mb-5">Your Measurements</h2>
 
         <div className="grid grid-cols-2 gap-4 mb-4">
@@ -126,18 +126,18 @@ export default function CalorieCalc() {
       </div>
 
       {result && (
-        <div className="card p-6 space-y-5 animate-slide-up">
+        <div className="card p-5 sm:p-6 space-y-5 animate-slide-up">
           <h2 className="font-bold text-gray-900 dark:text-white">Your Daily Calorie Needs</h2>
 
           {/* TDEE and BMR */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-brand-50 dark:bg-brand-950 border border-brand-200 dark:border-brand-800 rounded-xl p-4 text-center">
+            <div className="premium-stat-card bg-brand-50 text-center">
               <Flame className="w-6 h-6 text-brand-500 mx-auto mb-2" />
               <p className="text-xs text-gray-500 dark:text-gray-400">TDEE (Maintain Weight)</p>
               <p className="text-3xl font-bold text-brand-600 dark:text-brand-400 mt-1">{result.tdee}</p>
               <p className="text-xs text-gray-400 mt-0.5">kcal/day</p>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
+            <div className="premium-stat-card text-center">
               <Apple className="w-6 h-6 text-gray-500 mx-auto mb-2" />
               <p className="text-xs text-gray-500 dark:text-gray-400">BMR (Resting)</p>
               <p className="text-3xl font-bold text-gray-700 dark:text-gray-300 mt-1">{result.bmr}</p>
@@ -173,7 +173,7 @@ export default function CalorieCalc() {
                 { label: 'Carbs',   value: result.carbs_g,   unit: 'g', color: 'text-yellow-600 dark:text-yellow-400' },
                 { label: 'Fat',     value: result.fat_g,     unit: 'g', color: 'text-orange-600 dark:text-orange-400' },
               ].map(({ label, value, unit, color }) => (
-                <div key={label} className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3 text-center">
+                <div key={label} className="premium-stat-card p-3 text-center">
                   <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
                   <p className={`text-xl font-bold ${color}`}>{value}<span className="text-xs ml-0.5">{unit}</span></p>
                 </div>

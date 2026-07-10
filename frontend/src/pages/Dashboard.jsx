@@ -12,11 +12,11 @@ import {
   Droplets, Zap, Target, User, ChevronRight,
   Flame, Dumbbell, Scale, Activity, MessageSquare,
   CalendarDays, CheckCircle2, Info, ArrowRight,
-  BookOpen, Salad, AlertTriangle, Sparkles,
+  BookOpen, Salad, AlertTriangle, Sparkles, Trophy, CalendarRange,
 } from 'lucide-react'
 import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, AreaChart, Area,
+  ResponsiveContainer, AreaChart, Area, BarChart, Bar,
 } from 'recharts'
 import { getDailyMotivation } from '../services/api.js'
 import { useApp } from '../context/AppContext.jsx'
@@ -87,6 +87,22 @@ function ChartTooltip({ active, payload, label, unit }) {
       ))}
     </div>
   )
+}
+
+function AnalyticsMetric({ icon: Icon, color, bg, label, value, detail, percent }) {
+  return <div className="premium-stat-card"><div className="flex items-center justify-between"><span className={`flex h-9 w-9 items-center justify-center rounded-xl ${bg} ${color}`}><Icon className="h-4 w-4" /></span><span className="text-xs font-bold text-gray-900">{value}</span></div><p className="mt-3 text-xs font-bold text-gray-700">{label}</p><p className="mt-1 text-[11px] text-gray-500">{detail}</p><ProgressBar value={percent} max={100} color={color.replace('text-', 'bg-')} /></div>
+}
+
+function GoalRow({ label, value, detail, percent, color }) {
+  return <div className="rounded-2xl border border-gray-100 bg-white p-3"><div className="flex items-center justify-between gap-3"><p className="text-xs font-bold text-gray-800">{label}</p><p className="text-xs font-bold text-gray-600">{value}</p></div><p className="mt-1 text-[11px] text-gray-500">{detail}</p><div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100"><div className={`h-full rounded-full ${color}`} style={{ width: `${percent}%` }} /></div></div>
+}
+
+function RecordCard({ icon: Icon, color, bg, title, value }) {
+  return <div className="premium-stat-card"><div className={`flex h-9 w-9 items-center justify-center rounded-xl ${bg} ${color}`}><Icon className="h-4 w-4" /></div><p className="mt-3 text-xs font-bold text-gray-900">{value}</p><p className="mt-1 text-[11px] text-gray-500">{title}</p></div>
+}
+
+function InsightRow({ icon: Icon, color, bg, text }) {
+  return <div className="flex items-start gap-3 rounded-2xl border border-gray-100 bg-white p-3"><span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${bg} ${color}`}><Icon className="h-4 w-4" /></span><p className="text-xs leading-5 text-gray-600">{text}</p></div>
 }
 
 // ── BMI calculation with full validation ─────────────────────────────────
@@ -344,6 +360,7 @@ export default function Dashboard() {
 
   const hasWeightData   = progressData.some((e) => e.weight)
   const hasCalsData     = progressData.some((e) => e.calories)
+  const hasWaterData    = progressData.some((e) => e.water)
   const totalWorkouts   = progressData.filter((e) => e.workout).length
   const weightEntries   = progressData.filter((e) => e.weight)
   const avgWeight       = weightEntries.length
@@ -352,6 +369,44 @@ export default function Dashboard() {
   const latestWeight    = weightEntries.slice(-1)[0]?.weight || null
   const latestCalories  = progressData.filter((e) => e.calories).slice(-1)[0]?.calories || null
   const latestWater     = progressData.filter((e) => e.water).slice(-1)[0]?.water || null
+
+  // Analytics are intentionally derived only from local progress entries.
+  const now = new Date()
+  const weekStart = new Date(now)
+  weekStart.setDate(now.getDate() - 6)
+  weekStart.setHours(0, 0, 0, 0)
+  const monthStart = new Date(now)
+  monthStart.setDate(now.getDate() - 29)
+  monthStart.setHours(0, 0, 0, 0)
+  const datedEntries = progressData.filter((entry) => !Number.isNaN(new Date(entry.date).getTime()))
+  const weeklyEntries = datedEntries.filter((entry) => new Date(entry.date) >= weekStart)
+  const monthlyEntries = datedEntries.filter((entry) => new Date(entry.date) >= monthStart)
+  const weeklyWorkouts = weeklyEntries.filter((entry) => entry.workout).length
+  const monthlyWorkouts = monthlyEntries.filter((entry) => entry.workout).length
+  const weeklyCalories = weeklyEntries.filter((entry) => entry.calories).map((entry) => entry.calories)
+  const weeklyWater = weeklyEntries.filter((entry) => entry.water).map((entry) => entry.water)
+  const averageCalories = weeklyCalories.length ? Math.round(weeklyCalories.reduce((sum, value) => sum + value, 0) / weeklyCalories.length) : null
+  const averageWater = weeklyWater.length ? Math.round((weeklyWater.reduce((sum, value) => sum + value, 0) / weeklyWater.length) * 10) / 10 : null
+  const weightChange = weightEntries.length > 1 ? Math.round((weightEntries.at(-1).weight - weightEntries[0].weight) * 10) / 10 : null
+  const waterValues = progressData.filter((entry) => entry.water).map((entry) => entry.water)
+  const hydrationChange = waterValues.length >= 2
+    ? Math.round(((waterValues.at(-1) - waterValues[0]) / waterValues[0]) * 100)
+    : null
+  const completedHydrationDays = weeklyWater.filter((value) => value >= waterGoalFromWeight(userProfile?.weight)).length
+  const weeklyActivity = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, day) => ({
+    day: label,
+    workouts: weeklyEntries.filter((entry) => entry.workout && new Date(entry.date).getDay() === day).length,
+  }))
+  const highestCalories = progressData.filter((entry) => entry.calories).reduce((highest, entry) => !highest || entry.calories > highest.calories ? entry : highest, null)
+  const bestHydration = progressData.filter((entry) => entry.water).reduce((best, entry) => !best || entry.water > best.water ? entry : best, null)
+  const activeWeekCount = monthlyEntries.filter((entry) => entry.workout).length
+  const workoutDays = [...new Set(datedEntries.filter((entry) => entry.workout).map((entry) => new Date(entry.date).toDateString()))]
+    .map((date) => new Date(date).setHours(0, 0, 0, 0)).sort((a, b) => a - b)
+  const longestWorkoutStreak = workoutDays.reduce((streak, day, index) => {
+    const previous = workoutDays[index - 1]
+    const next = index && day - previous === 86400000 ? streak.current + 1 : 1
+    return { current: next, best: Math.max(streak.best, next) }
+  }, { current: 0, best: 0 }).best
 
   const earnedBadges = [
     progressData.length > 0 && 'first_log',
@@ -426,7 +481,7 @@ export default function Dashboard() {
 
   // ─────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-surface-50 dark:bg-gray-950">
+    <div className="premium-page min-h-screen bg-surface-50 dark:bg-slate-950">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
         {/* ── Greeting header ── */}
@@ -731,6 +786,30 @@ export default function Dashboard() {
                   </div>
                 )}
 
+                {/* Hydration chart */}
+                {hasWaterData && (
+                  <div className="card p-5 hover:shadow-card-md transition-shadow duration-200">
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center gap-2">
+                        <Droplets className="w-4 h-4 text-sky-500" />
+                        <h3 className="font-semibold text-sm text-gray-800 dark:text-gray-200">Water Intake</h3>
+                      </div>
+                      <span className="badge bg-sky-50 dark:bg-sky-950 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-900 text-[10px]">litres</span>
+                    </div>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mb-4 ml-6">Last {Math.min(14, progressData.length)} entries</p>
+                    <ResponsiveContainer width="100%" height={190}>
+                      <LineChart data={chartData} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
+                        <CartesianGrid vertical={false} stroke="#f1f5f9" strokeDasharray="3 6" />
+                        <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} width={34} />
+                        <Tooltip content={<ChartTooltip unit="L" />} cursor={{ stroke: '#e2e8f0', strokeWidth: 1 }} />
+                        <Line type="monotone" dataKey="water" name="Water" stroke="#0ea5e9" strokeWidth={3} dot={false} activeDot={{ r: 5, fill: '#0ea5e9', stroke: '#fff', strokeWidth: 2.5 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="flex items-center gap-2 mt-3 ml-1"><span className="w-4 h-0.5 bg-sky-500 rounded-full inline-block" /><span className="text-[11px] text-gray-400 dark:text-gray-500">Daily water intake (L)</span></div>
+                  </div>
+                )}
+
               </div>
             ) : (
               /* Empty charts state */
@@ -750,6 +829,25 @@ export default function Dashboard() {
                 </button>
               </div>
             )}
+
+            {/* ── Smart Progress Analytics ── */}
+            {progressData.length > 0 ? <>
+              <div className="card p-5 sm:p-6">
+                <div className="flex items-center justify-between gap-3 mb-5"><div className="flex items-center gap-2"><BarChart3 className="w-5 h-5 text-brand-600" /><div><h2 className="font-bold text-gray-900 dark:text-white">Smart Progress Analytics</h2><p className="text-xs text-gray-500">Weekly and monthly insights from your logged data.</p></div></div><span className="badge-blue">7 days</span></div>
+                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                  <AnalyticsMetric icon={Dumbbell} color="text-purple-600" bg="bg-purple-50" label="Workout consistency" value={`${weeklyWorkouts} / 3`} detail={weeklyWorkouts >= 3 ? 'Weekly target reached' : `${3 - weeklyWorkouts} to reach target`} percent={Math.min(100, Math.round(weeklyWorkouts / 3 * 100))} />
+                  <AnalyticsMetric icon={Droplets} color="text-sky-600" bg="bg-sky-50" label="Average hydration" value={averageWater ? `${averageWater} L` : '—'} detail={averageWater ? `${completedHydrationDays} day(s) at goal` : 'No weekly water logs'} percent={averageWater ? Math.min(100, Math.round(averageWater / waterGoal * 100)) : 0} />
+                  <AnalyticsMetric icon={Flame} color="text-orange-600" bg="bg-orange-50" label="Average calories" value={averageCalories ? `${averageCalories} kcal` : '—'} detail={averageCalories ? 'Weekly calorie logs' : 'No weekly calorie logs'} percent={averageCalories ? Math.min(100, Math.round(averageCalories / 2500 * 100)) : 0} />
+                  <AnalyticsMetric icon={Scale} color="text-emerald-600" bg="bg-emerald-50" label="Weight change" value={weightChange == null ? '—' : `${weightChange > 0 ? '+' : ''}${weightChange} kg`} detail={weightChange == null ? 'Need two weight logs' : 'Across all weight logs'} percent={Math.min(100, weightEntries.length * 20)} />
+                </div>
+                <div className="mt-5 rounded-2xl border border-surface-200 bg-surface-50 p-4"><div className="mb-2 flex items-center justify-between"><p className="text-xs font-bold text-gray-700">Weekly activity summary</p><p className="text-xs text-gray-500">{monthlyEntries.length} logs / last 30 days</p></div><ResponsiveContainer width="100%" height={110}><BarChart data={weeklyActivity} margin={{ top: 4, right: 0, left: -28, bottom: 0 }}><XAxis dataKey="day" tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} /><YAxis allowDecimals={false} tick={{ fontSize: 10, fill: '#94a3b8' }} tickLine={false} axisLine={false} /><Tooltip content={<ChartTooltip unit="workouts" />} /><Bar dataKey="workouts" name="Workouts" fill="#7c3aed" radius={[6, 6, 0, 0]} /></BarChart></ResponsiveContainer></div>
+              </div>
+              <div className="grid gap-5 xl:grid-cols-2">
+                <div className="card p-5 sm:p-6"><div className="flex items-center gap-2 mb-4"><Sparkles className="w-5 h-5 text-brand-600" /><div><h2 className="font-bold text-gray-900 dark:text-white">Health Insights</h2><p className="text-xs text-gray-500">Based only on your logs.</p></div></div><div className="space-y-3">{weeklyWorkouts > 0 && <InsightRow icon={Dumbbell} color="text-purple-600" bg="bg-purple-50" text={`You've completed ${weeklyWorkouts} workout${weeklyWorkouts === 1 ? '' : 's'} this week.`} />}{hydrationChange != null && <InsightRow icon={Droplets} color="text-sky-600" bg="bg-sky-50" text={`Hydration is ${hydrationChange >= 0 ? 'up' : 'down'} by ${Math.abs(hydrationChange)}% between your first and latest water log.`} />}{averageCalories && <InsightRow icon={Flame} color="text-orange-600" bg="bg-orange-50" text={`Average weekly calorie intake is ${averageCalories.toLocaleString()} kcal.`} />}{weightChange != null && <InsightRow icon={Scale} color="text-emerald-600" bg="bg-emerald-50" text={`Logged weight has changed by ${weightChange > 0 ? '+' : ''}${weightChange} kg.`} />}{!weeklyWorkouts && hydrationChange == null && !averageCalories && weightChange == null && <InsightRow icon={Info} color="text-brand-600" bg="bg-brand-50" text="Add more logs to unlock personalized data insights." />}</div></div>
+                <div className="card p-5 sm:p-6"><div className="flex items-center gap-2 mb-4"><Target className="w-5 h-5 text-brand-600" /><div><h2 className="font-bold text-gray-900 dark:text-white">Goal Progress</h2><p className="text-xs text-gray-500">Unavailable targets are not estimated.</p></div></div><div className="space-y-3"><GoalRow label="Workout goal" value={`${weeklyWorkouts} / 3 sessions`} detail={weeklyWorkouts >= 3 ? 'Weekly target complete' : `${3 - weeklyWorkouts} sessions remaining`} percent={Math.min(100, Math.round(weeklyWorkouts / 3 * 100))} color="bg-purple-500" /><GoalRow label="Hydration goal" value={averageWater ? `${averageWater} / ${waterGoal} L` : `0 / ${waterGoal} L`} detail={averageWater ? `${Math.max(0, Math.round((waterGoal - averageWater) * 10) / 10)} L to daily goal` : 'Log water to calculate progress'} percent={averageWater ? Math.min(100, Math.round(averageWater / waterGoal * 100)) : 0} color="bg-sky-500" /><GoalRow label="Nutrition goal" value={averageCalories ? `${averageCalories} kcal` : 'No target'} detail="No calorie target exists in current profile" percent={0} color="bg-orange-500" /><GoalRow label="Weight goal" value={latestWeight ? `${latestWeight} kg` : 'No target'} detail={userProfile?.goal ? `${userProfile.goal}; numeric target not set` : 'Set a profile goal to track this'} percent={0} color="bg-emerald-500" /></div></div>
+              </div>
+              <div className="card p-5 sm:p-6"><div className="flex items-center gap-2 mb-4"><Trophy className="w-5 h-5 text-orange-500" /><div><h2 className="font-bold text-gray-900 dark:text-white">Personal Records</h2><p className="text-xs text-gray-500">Detected from your recorded activity.</p></div></div><div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4"><RecordCard title="Longest workout streak" value={longestWorkoutStreak ? `${longestWorkoutStreak} day${longestWorkoutStreak === 1 ? '' : 's'}` : '—'} icon={Dumbbell} color="text-purple-600" bg="bg-purple-50" /><RecordCard title="Highest calorie log" value={highestCalories ? `${highestCalories.calories} kcal` : '—'} icon={Flame} color="text-orange-600" bg="bg-orange-50" /><RecordCard title="Best hydration day" value={bestHydration ? `${bestHydration.water} L` : '—'} icon={Droplets} color="text-sky-600" bg="bg-sky-50" /><RecordCard title="Monthly workouts" value={monthlyWorkouts ? `${monthlyWorkouts} workouts` : '—'} icon={CalendarDays} color="text-emerald-600" bg="bg-emerald-50" /></div></div>
+            </> : <div className="premium-empty-state"><div className="premium-icon bg-brand-50 text-brand-600 shadow-none"><BarChart3 className="w-5 h-5" /></div><h2 className="mt-5 text-xl font-bold text-gray-900">Unlock your analytics</h2><p className="mt-2 max-w-sm text-sm text-gray-500">Log weight, calories, water, or workouts to reveal your trends, goals, and personal records.</p><button onClick={() => setShowAdd(true)} className="btn-primary mt-6"><Plus className="w-4 h-4" /> Add your first log</button></div>}
 
             {/* ── Today's Recommendations ── */}
             <div className="card p-5 sm:p-6">

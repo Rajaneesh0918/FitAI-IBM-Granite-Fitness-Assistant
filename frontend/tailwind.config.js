@@ -62,6 +62,7 @@ export default {
         'card-md': '0 4px 12px 0 rgb(0 0 0 / 0.08), 0 2px 4px -2px rgb(0 0 0 / 0.06)',
         'card-lg': '0 8px 24px 0 rgb(0 0 0 / 0.10), 0 4px 8px -4px rgb(0 0 0 / 0.08)',
         'inner-sm': 'inset 0 1px 2px 0 rgb(0 0 0 / 0.06)',
+        'elevated': '0 4px 12px 0 rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.05)',
       },
       animation: {
         'fade-in':    'fadeIn 0.4s ease-in-out',
