@@ -60,10 +60,10 @@ export default function ExerciseLib() {
     : EXERCISE_CATEGORIES
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8">
+    <div className="premium-page max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <div className="w-10 h-10 bg-pink-500 rounded-xl flex items-center justify-center">
+          <div className="w-11 h-11 bg-brand-500 rounded-2xl flex items-center justify-center shadow-card-md">
             <BookOpen className="w-6 h-6 text-white" />
           </div>
           <h1 className="section-title">Exercise Library</h1>
@@ -101,7 +101,7 @@ export default function ExerciseLib() {
                 className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors
                   ${level === l
                     ? 'bg-brand-500 text-white'
-                    : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    : 'bg-white border border-gray-200 text-gray-600 hover:border-brand-200 hover:bg-brand-50'
                   }`}
               >
                 {l}
@@ -110,12 +110,12 @@ export default function ExerciseLib() {
           </div>
 
           {/* Exercise categories */}
-          <div className="card overflow-hidden divide-y divide-gray-100 dark:divide-gray-800">
+          <div className="card overflow-hidden divide-y divide-gray-100 dark:divide-gray-800 shadow-card-md">
             {Object.entries(filteredCategories).map(([cat, exercises]) => (
               <div key={cat}>
                 <button
                   onClick={() => setExpandedCat(expandedCat === cat ? null : cat)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-brand-50 transition-colors"
                 >
                   <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{cat}</span>
                   <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${expandedCat === cat ? 'rotate-180' : ''}`} />
@@ -129,7 +129,7 @@ export default function ExerciseLib() {
                         className={`w-full text-left text-sm px-3 py-2 rounded-lg transition-colors
                           ${selected === ex
                             ? 'bg-brand-50 dark:bg-brand-950 text-brand-600 dark:text-brand-400 font-medium'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                            : 'text-gray-600 hover:bg-brand-50'
                           }`}
                       >
                         {ex}
@@ -145,7 +145,7 @@ export default function ExerciseLib() {
         {/* Right: exercise detail */}
         <div className="md:col-span-3">
           {!selected && (
-            <div className="card p-8 text-center text-gray-400 dark:text-gray-500 h-full flex flex-col items-center justify-center">
+            <div className="card p-8 text-center text-gray-400 dark:text-gray-500 h-full min-h-[420px] flex flex-col items-center justify-center">
               <BookOpen className="w-12 h-12 mb-3 opacity-30" />
               <p className="font-medium">Select an exercise to see the full guide</p>
               <p className="text-sm mt-1">Including form cues, muscles worked, and progressions</p>
