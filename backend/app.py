@@ -9,6 +9,8 @@
 import os
 import json
 import logging
+import time
+import threading
 import requests as http_requests
 from datetime import datetime
 from flask import Flask, request, jsonify
@@ -35,6 +37,10 @@ log = logging.getLogger("fitai")
 # ──────────────────────────────────────────────────────────────────────────
 load_dotenv()
 
+# Keep one connection pool for the lifetime of the Flask process so repeated
+# IAM and Watsonx requests can reuse established HTTPS/TLS connections.
+http_session = http_requests.Session()
+
 
 # ──────────────────────────────────────────────────────────────────────────
 # IBM Watsonx.ai REST Client
@@ -52,10 +58,22 @@ class WatsonxClient:
         self.project_id = project_id
         self.base_url   = url.rstrip("/")
         self.model_id   = model_id
+        self._access_token = None
+        self._token_expires_at = 0
+        self._token_refresh_buffer_seconds = 60
 
     def _get_iam_token(self) -> str:
-        """Exchange IBM API key for a short-lived IAM Bearer token."""
+        """Exchange IBM API key for a short-lived IAM Bearer token and reuse it until expiry."""
         debug = os.getenv("WATSONX_DEBUG", "true").lower() != "false"
+        now = time.time()
+
+        if self._access_token and self._token_expires_at > now + self._token_refresh_buffer_seconds:
+            if debug:
+                log.debug(
+                    "Using cached IAM token | expires_in=%.1f seconds",
+                    self._token_expires_at - now,
+                )
+            return self._access_token
 
         if debug:
             key_preview = self.api_key[:6] + "..." if self.api_key else "(empty)"
@@ -66,7 +84,7 @@ class WatsonxClient:
                 "IBM_API_KEY is empty. Ensure your .env file contains IBM_API_KEY=<your key>."
             )
 
-        resp = http_requests.post(
+        resp = http_session.post(
             self.IAM_URL,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={
@@ -81,12 +99,21 @@ class WatsonxClient:
                 f"IAM token failed — HTTP {resp.status_code}: {resp.text[:300]}"
             )
 
-        token = resp.json().get("access_token", "")
+        token_data = resp.json()
+        token = token_data.get("access_token", "")
         if not token:
             raise RuntimeError(f"IAM response has no access_token: {resp.text[:200]}")
 
+        expires_in = int(token_data.get("expires_in", 3600))
+        self._access_token = token
+        self._token_expires_at = time.time() + expires_in
+
         if debug:
-            log.debug("IAM token obtained | length=%d", len(token))
+            log.debug(
+                "IAM token obtained | length=%d expires_in=%d",
+                len(token),
+                expires_in,
+            )
 
         return token
 
@@ -135,7 +162,7 @@ class WatsonxClient:
                 len(prompt), max_new_tokens,
             )
 
-        resp = http_requests.post(
+        resp = http_session.post(
             endpoint,
             headers={
                 "Authorization": f"Bearer {token}",
@@ -334,74 +361,85 @@ def build_system_prompt(user_profile: dict = None) -> str:
     inst   = AGENT_INSTRUCTIONS
     safety = inst["safety_rules"]
 
-    active_specs = [
-        k.replace("_", " ").title()
-        for k, v in inst["fitness_specializations"].items() if v
-    ]
-    active_nutrition = [
-        k.replace("_", " ").title()
-        for k, v in inst["nutrition_coaching"].items() if v
-    ]
-
     profile_context = ""
     if user_profile:
-        profile_context = (
-            f"\n\nUSER PROFILE:\n"
-            f"- Name: {user_profile.get('name', 'User')}\n"
-            f"- Age: {user_profile.get('age', 'Not provided')}\n"
-            f"- Gender: {user_profile.get('gender', 'Not provided')}\n"
-            f"- Height: {user_profile.get('height', 'Not provided')} cm\n"
-            f"- Weight: {user_profile.get('weight', 'Not provided')} kg\n"
-            f"- Fitness Goal: {user_profile.get('goal', 'General fitness')}\n"
-            f"- Fitness Level: {user_profile.get('level', 'Beginner')}\n"
-            f"- Available Equipment: {user_profile.get('equipment', 'No equipment')}\n"
-            f"- Health Conditions: {user_profile.get('conditions', 'None reported')}\n"
+        profile_fields = (
+            ("Name", "name", ""), ("Age", "age", ""),
+            ("Gender", "gender", ""), ("Height", "height", " cm"),
+            ("Weight", "weight", " kg"), ("Fitness goal", "goal", ""),
+            ("Fitness level", "level", ""), ("Equipment", "equipment", ""),
+            ("Health conditions", "conditions", ""),
         )
+        supplied_fields = [
+            f"- {label}: {user_profile[key]}{unit}"
+            for label, key, unit in profile_fields
+            if user_profile.get(key) not in (None, "")
+        ]
+        if supplied_fields:
+            profile_context = "\n\nUSER PROFILE:\n" + "\n".join(supplied_fields)
 
     prompt = f"""
-{inst['agent_role']}
+You are FitAI Coach, a science-based fitness and wellness coach. Give personalized,
+practical workout, nutrition, and healthy-lifestyle guidance for every fitness level.
 
-YOUR TONE: {inst['tone']}
-PERSONALITY: {', '.join(inst['personality_traits'])}
+STYLE: {inst['tone']}. Be encouraging, clear, non-judgmental, and concise. Use clear
+structure for plans; include sets, reps, rest, and form cues for workouts, and calories
+and macros for nutrition when relevant. End with one practical Pro Tip.
 
-FITNESS COACHING AREAS: {', '.join(active_specs)}
-NUTRITION COACHING AREAS: {', '.join(active_nutrition)}
-
-RESPONSE RULES:
-- Use bullet points and clear structure for all workout and nutrition plans.
-- Always include sets, reps, rest periods for exercises.
-- Include calorie and macro information for nutrition advice.
-- Explain each exercise clearly with proper form cues.
-- Always end your response with one practical "💪 Pro Tip".
-- Keep answers detailed yet concise — no unnecessary filler.
-- Use motivating, energetic language to inspire action.
-
-SAFETY RULES:
-- {safety['disclaimer']}
-- Never recommend exercises that could cause injury without proper guidance.
-- Always recommend consulting a doctor before starting a new fitness program.
-- Warn if caloric intake would fall below 1200 kcal/day.
-- Promote safe weight loss of max {safety['safe_weight_loss_rate_kg_per_week']} kg/week.
-- Flag any mention of injuries or pain and recommend professional evaluation.
+SAFETY: {safety['disclaimer']} Do not prescribe medication. Avoid unsafe exercise advice;
+flag pain, injuries, or relevant health conditions for professional evaluation. Do not
+recommend intake below 1200 kcal/day; limit weight loss guidance to
+{safety['safe_weight_loss_rate_kg_per_week']} kg/week.
 {profile_context}
 """.strip()
 
     return prompt
 
 
-def build_full_prompt(user_message: str, history: list, user_profile: dict = None) -> str:
-    """Build the complete prompt with system instructions + conversation history."""
-    system_prompt = build_system_prompt(user_profile)
-    conversation  = f"[SYSTEM]\n{system_prompt}\n\n"
+MAX_HISTORY_TURNS = 4
+MAX_HISTORY_CHARS = 1600
 
-    # Include last 6 turns for context (keeps token usage manageable)
-    for turn in history[-6:]:
-        role    = turn.get("role", "user")
-        content = turn.get("content", "")
+
+def build_full_prompt(user_message: str, history: list, user_profile: dict = None) -> str:
+    """Build the complete prompt with the most relevant bounded conversation context."""
+    system_prompt = build_system_prompt(user_profile)
+    conversation = f"[SYSTEM]\n{system_prompt}\n\n"
+
+    # Preserve recent conversational memory without allowing long Granite
+    # responses or duplicate messages to grow every subsequent request.
+    cleaned_history = []
+    for turn in history:
+        role = "user" if turn.get("role") == "user" else "assistant"
+        content = str(turn.get("content", "")).strip()
+        if not content:
+            continue
+        if cleaned_history and cleaned_history[-1] == (role, content):
+            continue
+        cleaned_history.append((role, content))
+
+    # The current message is supplied separately. Remove a matching most-recent
+    # user turn (for example, the Chat page's regenerate action) so it is not
+    # sent twice while retaining the previous assistant response as context.
+    current_message = user_message.strip()
+    for index in range(len(cleaned_history) - 1, -1, -1):
+        role, content = cleaned_history[index]
         if role == "user":
-            conversation += f"Human: {content}\n"
-        else:
-            conversation += f"Assistant: {content}\n"
+            if content == current_message:
+                del cleaned_history[index]
+            break
+
+    context_turns = []
+    remaining_chars = MAX_HISTORY_CHARS
+    for role, content in reversed(cleaned_history[-MAX_HISTORY_TURNS:]):
+        if remaining_chars <= 0:
+            break
+        clipped_content = content[:remaining_chars]
+        context_turns.append((role, clipped_content))
+        remaining_chars -= len(clipped_content)
+
+    for role, content in reversed(context_turns):
+        speaker = "Human" if role == "user" else "Assistant"
+        conversation += f"{speaker}: {content}\n"
 
     conversation += f"Human: {user_message}\nAssistant:"
     return conversation
@@ -502,26 +540,41 @@ def calculate_tdee(
 # Set WATSONX_MODEL_ID in your .env to override the default below.
 # ──────────────────────────────────────────────────────────────────────────
 WATSONX_MODEL_ID = os.getenv("WATSONX_MODEL_ID", "ibm/granite-4-h-small")
+CHAT_MAX_NEW_TOKENS = 512
+WORKOUT_PLAN_MAX_NEW_TOKENS = 900
+NUTRITION_PLAN_MAX_NEW_TOKENS = 1200
+_watsonx_client = None
+_watsonx_client_lock = threading.Lock()
 
 def get_watsonx_client() -> WatsonxClient:
     """Return a configured WatsonxClient using credentials from .env."""
-    api_key    = os.getenv("IBM_API_KEY", "")
-    project_id = os.getenv("IBM_PROJECT_ID", "")
-    url        = os.getenv("IBM_URL", "https://us-south.ml.cloud.ibm.com")
+    global _watsonx_client
 
-    log.debug(
-        "WatsonxClient | api_key_set=%s project=%s url=%s model=%s",
-        bool(api_key),
-        project_id[:8] + "..." if project_id else "(empty)",
-        url, WATSONX_MODEL_ID,
-    )
+    if _watsonx_client is not None:
+        return _watsonx_client
 
-    return WatsonxClient(
-        api_key    = api_key,
-        project_id = project_id,
-        url        = url,
-        model_id   = WATSONX_MODEL_ID,
-    )
+    with _watsonx_client_lock:
+        if _watsonx_client is not None:
+            return _watsonx_client
+
+        api_key    = os.getenv("IBM_API_KEY", "")
+        project_id = os.getenv("IBM_PROJECT_ID", "")
+        url        = os.getenv("IBM_URL", "https://us-south.ml.cloud.ibm.com")
+
+        log.debug(
+            "WatsonxClient | api_key_set=%s project=%s url=%s model=%s",
+            bool(api_key),
+            project_id[:8] + "..." if project_id else "(empty)",
+            url, WATSONX_MODEL_ID,
+        )
+
+        _watsonx_client = WatsonxClient(
+            api_key    = api_key,
+            project_id = project_id,
+            url        = url,
+            model_id   = WATSONX_MODEL_ID,
+        )
+        return _watsonx_client
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -551,24 +604,45 @@ def health_check():
 @app.route("/api/chat", methods=["POST"])
 def chat():
     """Main AI chat endpoint — sends message to IBM Granite and returns response."""
+    total_start_time = time.perf_counter()
+
+    request_receive_start = time.perf_counter()
     data         = request.get_json(force=True)
     user_message = data.get("message", "").strip()
     history      = data.get("history", [])
     user_profile = data.get("user_profile", {})
+    request_receive_elapsed_ms = (time.perf_counter() - request_receive_start) * 1000
+    log.info("[PERF] request receive | %.3f ms", request_receive_elapsed_ms)
 
     if not user_message:
         return jsonify({"error": "Empty message"}), 400
 
     try:
-        client   = get_watsonx_client()
-        prompt   = build_full_prompt(user_message, history, user_profile or None)
-        result   = client.generate_text(prompt=prompt)
+        client = get_watsonx_client()
 
-        # Strip any leaked prompt prefixes
+        prompt_build_start = time.perf_counter()
+        prompt = build_full_prompt(user_message, history, user_profile or None)
+        prompt_build_elapsed_ms = (time.perf_counter() - prompt_build_start) * 1000
+        log.info("[PERF] prompt build | %.3f ms", prompt_build_elapsed_ms)
+
+        api_call_start = time.perf_counter()
+        result = client.generate_text(
+            prompt=prompt,
+            max_new_tokens=CHAT_MAX_NEW_TOKENS,
+        )
+        api_call_elapsed_ms = (time.perf_counter() - api_call_start) * 1000
+        log.info("[PERF] IBM watsonx API call | %.3f ms", api_call_elapsed_ms)
+
+        parse_start = time.perf_counter()
         response = result.strip()
         for prefix in ["Assistant:", "FitAI Coach:", "Coach:"]:
             if response.startswith(prefix):
                 response = response[len(prefix):].strip()
+        parse_elapsed_ms = (time.perf_counter() - parse_start) * 1000
+        log.info("[PERF] response parsing | %.3f ms", parse_elapsed_ms)
+
+        total_elapsed_ms = (time.perf_counter() - total_start_time) * 1000
+        log.info("[PERF] total request processing | %.3f ms", total_elapsed_ms)
 
         return jsonify({
             "response":  response,
@@ -577,6 +651,8 @@ def chat():
         })
 
     except Exception as exc:
+        total_elapsed_ms = (time.perf_counter() - total_start_time) * 1000
+        log.info("[PERF] total request processing | %.3f ms", total_elapsed_ms)
         log.error("Chat endpoint failed: %s", exc, exc_info=True)
         return jsonify({
             "error":    str(exc),
@@ -613,7 +689,10 @@ def workout_plan():
     try:
         client = get_watsonx_client()
         prompt = build_full_prompt(prompt_text, [], user_profile or None)
-        result = client.generate_text(prompt=prompt, max_new_tokens=1500)
+        result = client.generate_text(
+            prompt=prompt,
+            max_new_tokens=WORKOUT_PLAN_MAX_NEW_TOKENS,
+        )
         return jsonify({
             "plan":      result.strip(),
             "goal":      goal,
@@ -672,7 +751,10 @@ def nutrition_guidance():
     try:
         client = get_watsonx_client()
         prompt = build_full_prompt(prompt_text, [], user_profile or None)
-        result = client.generate_text(prompt=prompt, max_new_tokens=1500)
+        result = client.generate_text(
+            prompt=prompt,
+            max_new_tokens=NUTRITION_PLAN_MAX_NEW_TOKENS,
+        )
         return jsonify({
             "guidance":  result.strip(),
             "goal":      goal,
@@ -840,7 +922,7 @@ def debug_watsonx():
 
     # Step 1: IAM token
     try:
-        iam_resp = http_requests.post(
+        iam_resp = http_session.post(
             WatsonxClient.IAM_URL,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
             data={"grant_type": "urn:ibm:params:oauth:grant-type:apikey", "apikey": api_key},
@@ -861,7 +943,7 @@ def debug_watsonx():
 
     # Step 2: Generation test
     try:
-        gen_resp = http_requests.post(
+        gen_resp = http_session.post(
             f"{url.rstrip('/')}/ml/v1/text/generation?version=2023-05-29",
             headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json"},
             json={
