@@ -1,29 +1,42 @@
 # 💪 FitAI — AI-Powered Fitness Buddy
 
-<img width="1548" height="907" alt="image" src="https://github.com/user-attachments/assets/14c803a9-4170-48e5-828f-0898114b4716" />
-
-
-
-
-
-<img width="1473" height="903" alt="image" src="https://github.com/user-attachments/assets/e5fe4872-2dc0-4a76-a0db-2bcc7d585027" />
-
-
-
-
-
-<img width="1143" height="778" alt="image" src="https://github.com/user-attachments/assets/ffea90fe-ee75-4d44-a199-aadd42bf785d" />
+<img width="1768" height="794" alt="image" src="https://github.com/user-attachments/assets/ea74661b-77d3-43b8-b584-842f7e35c98d" />
 
 
 
 
 
 
-<img width="1390" height="907" alt="image" src="https://github.com/user-attachments/assets/be53e5e4-fb10-4b00-a23b-0e49e2492443" />
+<img width="1664" height="797" alt="image" src="https://github.com/user-attachments/assets/5a755ddf-e03c-4e5d-ad26-224f68fcacbf" />
 
 
 
 
+
+
+<img width="1773" height="890" alt="image" src="https://github.com/user-attachments/assets/0bae7ec4-9a40-49c1-b729-9bdb24a1e518" />
+
+
+
+
+
+
+
+<img width="1638" height="894" alt="image" src="https://github.com/user-attachments/assets/2e7a478b-1b73-4aa9-a5a7-e6c8e4e503d7" />
+
+<img width="1622" height="912" alt="image" src="https://github.com/user-attachments/assets/be292b09-b310-4584-b3c3-4bdf36766acb" />
+
+<img width="1537" height="909" alt="image" src="https://github.com/user-attachments/assets/776f9c19-c4d1-4420-87cc-5c42ea44a68e" />
+
+<img width="1584" height="903" alt="image" src="https://github.com/user-attachments/assets/7b5f4343-a5e7-4c94-bf0a-f713b6e6ccf2" />
+
+<img width="1287" height="884" alt="image" src="https://github.com/user-attachments/assets/552189e8-c175-424c-a089-4d6651206395" />
+
+<img width="1369" height="885" alt="image" src="https://github.com/user-attachments/assets/4994125d-1ce3-4ba7-a4bd-fdcb5e412ff3" />
+
+<img width="1247" height="907" alt="image" src="https://github.com/user-attachments/assets/8e41be9f-9fe1-40d8-8b94-85c644077233" />
+
+<img width="1388" height="908" alt="image" src="https://github.com/user-attachments/assets/709acd1c-514e-4e41-b2f6-a80522c57d2a" />
 
 
 **FitAI** is a professional full-stack fitness web application powered by **IBM Watsonx.ai** and **IBM Granite Foundation Models**. It provides personalized workout plans, nutrition guidance, BMI/calorie calculations, an exercise library, and daily AI motivation — all through a modern React + Flask architecture.
